@@ -1,9 +1,11 @@
 install.packages("RSocrata")
+install.packages("gstat")
 library("RSocrata")
 library("gstat")
 library("sp")
 library("spdep")
 library("rgdal")
+
 
 # Police Arrests, https://www.dallasopendata.com/Public-Safety/Police-Arrests/sdr7-6v3j
 PA <- read.socrata("https://www.dallasopendata.com/resource/sdr7-6v3j.csv")
@@ -18,8 +20,11 @@ PI <- read.socrata("https://www.dallasopendata.com/resource/qv6i-rri7.csv")
 PBD <- read.socrata("https://www.dallasopendata.com/resource/ftja-9jxd.csv")
 
 
-save(list = ls(),file = "C:/Users/sconroy/Desktop/Debug/PoliceData.RData")
+load("C:/Users/sconroy/Desktop/Debug/PoliceData.RData")
+
 saveRDS(PA,file = "C:/Users/sconroy/Desktop/Debug/PoliceArrests.RDS")
+saveRDS(PI,file = "C:/Users/sconroy/Desktop/Debug/PoliceIncidents.RDS")
+
 nrow(PA)
 nrow(PI)
 nrow(PAC)

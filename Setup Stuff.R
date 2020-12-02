@@ -1,23 +1,20 @@
 remove.packages("blogdown")
 install.packages("blogdown")
 library(blogdown)
-
+library(data.table)
 blogdown::new_site(dir = "C:/Users/sconroy/Documents/meystingray.github.io")
 blogdown::new_post(title = "Test1234")
 setwd("C:/Users/sconroy/Documents/meystingray.github.io")
 
 
-"AIzaSyDKTY7qM26P0I3Lv4Xi196oP7-aVdVR2PU"
-
-register_google(key = "AIzaSyDKTY7qM26P0I3Lv4Xi196oP7-aVdVR2PU")
-
-
 library(ggmap)
+register_google(key = "")
+
 bikemap1 <- get_map(location = c(lon = -95.3632715, lat = 29.7632836),
                     maptype = "terrain", source = "google", zoom = 14)
 
-map <- get_map(location = "texas", zoom = 6, source = "stamen")
-ggmap(map, fullpage = TRUE)
-
-(map <- get_map("orlando, florida"))
+DallasMap <- get_map(location = "Dallas", zoom = 15, source = "google")
 ggmap(map)
+dev.off()
+ggmap(map) + 
+    geom_point(data = starbucksNC, aes(x = Longitude, y = Latitude), color = "navy", size = 1)

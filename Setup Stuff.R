@@ -2,9 +2,13 @@ remove.packages("blogdown")
 install.packages("blogdown")
 library(blogdown)
 library(data.table)
-blogdown::new_site(dir = "C:/Users/sconroy/Documents/meystingray.github.io")
-blogdown::new_post(title = "Test1234")
+
 setwd("C:/Users/sconroy/Documents/meystingray.github.io")
+getOption("blogdown.subdir", "post")
+blogdown::new_site(dir = "C:/Users/sconroy/Documents/meystingray.github.io")
+blogdown::new_post(title = "Murder Rates in Dallas",ext = ".Rmd",
+                   subdir = "C:/Users/sconroy/Documents/meystingray.github.io/content/post")
+# Use the blogdown addin to create new posts
 
 
 library(ggmap)

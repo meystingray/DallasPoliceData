@@ -1,4 +1,6 @@
-PI <- readRDS("C:/Users/sconroy/Desktop/Debug/PoliceIncidents.RDS")
+# Police Incidents, https://www.dallasopendata.com/Public-Safety/Police-Incidents/qv6i-rri7
+PI <- read.socrata("https://www.dallasopendata.com/resource/qv6i-rri7.csv")
+#PI <- readRDS("C:/Users/sconroy/Desktop/Debug/PoliceIncidents.RDS")
 
 library(data.table)
 library(ggplot2)
@@ -8,6 +10,8 @@ setDT(PI)
 
 # Extract murder incidents by looking for "MURDER" or "HOMICIDE" in the officer's incident description.
 Murder <- PI[grepl("MURDER",offincident) | grepl("HOMICIDE",offincident),]
+#saveRDS(Murder,file = "C:/Users/sconroy/Desktop/Debug/Murder.RDS")
+
 Murder[,Date := as.Date(substr(date1,1,10))]
 
 # Clean Up Data 
@@ -21,11 +25,14 @@ Murder[,NumPerMonth := .N,by = MonthDate]
 Murder[,SmoothNumPerDay := predict(smooth.spline(NumPerDay,df = 20))$y]
 Murder[,SmoothNumPerMonth := predict(smooth.spline(NumPerMonth,df = 10))$y]
 
-# Plot Num of Murders per Month
-plot(Murder[,.N,by = MonthDate])
-lines(Murder$MonthDate,Murder$SmoothNumPerMonth,col = "red")
-ggplot(Murder,aes(x = MonthDate,y = SmoothNumPerMonth)) + geom_line(color = "red") + 
-    geom_point(data = Murder,aes(x = Date,y = NumPerMonth)) + ggtitle("Murder Rate Per Month")
+# Plot Num of Murders per Month & Day
+ggplot(Murder) +
+    geom_line(aes(x = MonthDate,y = SmoothNumPerMonth,color = "red")) + 
+    geom_point(data = Murder,aes(x = Date,y = NumPerMonth)) + 
+    geom_line(aes(x = Date,y = SmoothNumPerDay,color = "blue")) +
+    ggtitle("Murder Rates") + ylab("# Murders") + 
+    scale_colour_manual(name = '',values = c('blue'='blue','red'='red'),
+                        labels = c('Per Day','Per Month'))
 
 # Plot by Incident Type
 table(Murder$offincident)

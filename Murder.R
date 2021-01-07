@@ -5,49 +5,75 @@ PI <- read.socrata("https://www.dallasopendata.com/resource/qv6i-rri7.csv")
 library(data.table)
 library(ggplot2)
 library(stringr)
-
+library(RSocrata)
 setDT(PI)
 
 # Extract murder incidents by looking for "MURDER" or "HOMICIDE" in the officer's incident description.
 Murder <- PI[grepl("MURDER",offincident) | grepl("HOMICIDE",offincident),]
-#saveRDS(Murder,file = "C:/Users/sconroy/Desktop/Debug/Murder.RDS")
+saveRDS(Murder,file = "C:/Users/sconroy/Desktop/Debug/Murder.RDS")
+Murder <- readRDS("C:/Users/sconroy/Desktop/Debug/Murder.RDS")
 
 Murder[,Date := as.Date(substr(date1,1,10))]
 
-# Clean Up Data 
+# Clean Up Data
+Murder[,WeekNum := strftime(Date, format = "%V")]
+Murder <- merge(Murder,Murder[,head(.SD, 1L),.SDcols = "Date",by = c("servyr","WeekNum")],by = c("servyr","WeekNum"))
+setnames(Murder,old = c("Date.x","Date.y"),new = c("Date","WeekDate"))
 Murder[,MonthDate := as.Date(paste0(format(Date,"%Y-%m"),"-01"))]
-setorder(Murder,Date)
 
 Murder[,NumPerDay := .N,by = Date]
+Murder[,NumPerWeek := .N,by = WeekDate]
 Murder[,NumPerMonth := .N,by = MonthDate]
 
 # Smooth Murder Rates for plotting
 Murder[,SmoothNumPerDay := predict(smooth.spline(NumPerDay,df = 20))$y]
+Murder[,SmoothNumPerWeek := predict(smooth.spline(NumPerWeek,df = 55))$y]
 Murder[,SmoothNumPerMonth := predict(smooth.spline(NumPerMonth,df = 10))$y]
 
 # Plot Num of Murders per Month & Day
 ggplot(Murder) +
-    geom_line(aes(x = MonthDate,y = SmoothNumPerMonth,color = "red")) + 
+    geom_line(aes(x = MonthDate,y = SmoothNumPerMonth,color = "red"),size = 1) + 
     geom_point(data = Murder,aes(x = Date,y = NumPerMonth)) + 
     geom_line(aes(x = Date,y = SmoothNumPerDay,color = "blue")) +
-    ggtitle("Murder Rates") + ylab("# Murders") + 
+    ggtitle("Dallas Murder Rates since 2014") + ylab("# Murders") + 
     scale_colour_manual(name = '',values = c('blue'='blue','red'='red'),
-                        labels = c('Per Day','Per Month'))
+                        labels = c('Per Day','Per Month')) + 
+    theme(legend.position = "top",plot.title = element_text(hjust = 0.5))
 
-# Plot by Incident Type
-table(Murder$offincident)
-ggplot(Murder[!(offincident %in% c("CAPITAL MURDER WHILE REMUNERATION","CRIMINAL NEGLIGENT HOMICIDE (DISTRACTED DRIVING"))],
-       aes(x = MonthDate,y = SmoothNumPerMonth)) + geom_line() + geom_point() + facet_wrap(~ offincident)
+ggplot(Murder) +
+    geom_point(aes(x = WeekDate,y = NumPerWeek)) + 
+    geom_line(aes(x = WeekDate,y = SmoothNumPerWeek),color = "red") +
+    ggtitle("Murder Rates per Week") + ylab("# Murders")
+
+library(ggplot2)
+ggplot(Murder[Date >= as.Date("2020-06-01"),]) +
+    geom_point(aes(x = Date,y = NumPerDay)) + 
+    geom_line(aes(x = WeekDate,y = SmoothNumPerDay),color = "red") +
+    ggtitle("Murder Rates per Day") + ylab("# Murders")
+
+Murder[Date >= as.Date("2020-01-01"),.(WeekDate,WeekNum,NumPerWeek,SmoothNumPerWeek)]
 
 # Plot 2020 Only Murder Rate per Month
 ggplot(Murder[Date > as.Date("2020-01-01"),],aes(x = MonthDate)) + geom_bar() +
     ylab("# Murders per Month") + ggtitle("2020 Murders Per Month") +
     geom_text(aes(x = MonthDate,y = NumPerMonth,label = NumPerMonth),vjust = -0.25)
+
+
+# Plot by Incident Type
+table(Murder$offincident)
+Murder[offincident == "CAPITAL MURDER BY TERROR THREAT/OTHER FELONY",offincident := "CAPITAL MURDER BY TERROR THREAT"]
+ggplot(Murder[!(offincident %in% c("CAPITAL MURDER WHILE REMUNERATION","CRIMINAL NEGLIGENT HOMICIDE (DISTRACTED DRIVING"))]) +
+    geom_bar(aes(x = MonthDate)) + facet_wrap(~ offincident)
+
     
 # Victim Rate per Race
 Murder[,NumPerRace := .N,by = comprace]
-ggplot(Murder,aes(x = comprace)) + geom_bar() + scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
-    xlab("") + ylab("# per Victim Race") + geom_text(aes(x = comprace,y = NumPerRace,label = NumPerRace),vjust = -0.25) +
+Murder[,PercentPerRace := round(100*.N/nrow(Murder),digits = 0),by = comprace]
+Murder[,PercentPerRace := paste0(PercentPerRace,"%")]
+ggplot(Murder) + geom_bar(aes(x = comprace)) +
+    scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+    xlab("") + ylab("# per Victim Race") + 
+    geom_text(aes(x = comprace,y = NumPerRace,label = PercentPerRace),vjust = -0.25) +
     ggtitle("Victim Count by Race")
 
 
@@ -110,14 +136,16 @@ ggplot(Murder,aes(x = compsex)) + geom_bar() + facet_wrap(~ servyr) +
     ggtitle("Murder Rate per Sex")
 
 
-# Increases Per Year Per Communities
-Murder[,NumPerRace := .N,by = comprace]
-ggplot(Murder[comprace == "Black" & compsex == "Male" & compage < 30,],aes(x = servyr)) + geom_bar()
-ggplot(Murder[comprace == "Black" & compsex == "Male" & compage > 30,],aes(x = servyr)) + geom_bar()
-ggplot(Murder[comprace == "Black" & compsex == "Female",],aes(x = servyr)) + geom_bar()
-ggplot(Murder[comprace == "White" & compsex == "Male" & compage < 30,],aes(x = servyr)) + geom_bar()
-ggplot(Murder[comprace == "Hispanic or Latino" & compsex == "Male" & compage < 30,],aes(x = servyr)) + geom_bar()
-ggplot(Murder[comprace == "Hispanic or Latino" & compsex == "Male" & compage > 30,],aes(x = servyr)) + geom_bar()
+# Victim Rates Per Year Per Communities
+ggplot(Murder[comprace == "Black" & compsex == "Male" & compage < 30,],aes(x = servyr)) + geom_bar() + ggtitle("Murder Rate Per Year: Black Males Under 30")
+ggplot(Murder[comprace == "Black" & compsex == "Male" & compage >= 30,],aes(x = servyr)) + geom_bar() + ggtitle("Murder Rate Per Year: Black Males Over 30")
+ggplot(Murder[comprace == "Black" & compsex == "Female",],aes(x = servyr)) + geom_bar() + ggtitle("Murder Rate Per Year: Black Females")
+ggplot(Murder[comprace == "White" & compsex == "Male" & compage < 30,],aes(x = servyr)) + geom_bar() + ggtitle("Murder Rate Per Year: White Males Under 30")
+ggplot(Murder[comprace == "White" & compsex == "Male" & compage >= 30,],aes(x = servyr)) + geom_bar() + ggtitle("Murder Rate Per Year: White Males Over 30")
+ggplot(Murder[comprace == "Hispanic or Latino" & compsex == "Male" & compage < 30,],aes(x = servyr)) + geom_bar() + ggtitle("Murder Rate Per Year: Hispanic Males Under 30")
+ggplot(Murder[comprace == "Hispanic or Latino" & compsex == "Male" & compage >= 30,],aes(x = servyr)) + geom_bar() + ggtitle("Murder Rate Per Year: Hispanic Males Over 30")
+
+#We see a significant increase in White and Hispanic Males Over 30 and a Significant Decrease in While Males Under 30. 
 
 # 
 unique(Murder$nibrs_crime)
@@ -142,6 +170,11 @@ Murder[,.(LatLongStart,LatLongEnd,LatLong,Latitude,Longitude)]
 # Shootings by Year on Map
 #ggplot(Murder) + geom_point(aes(x = Longitude,y = Latitude,color = signal)) + facet_wrap(~ servyr) + ylab(NULL)
 #ggplot(Murder[signal == "19 - SHOOTING",]) + geom_point(aes(x = Longitude,y = Latitude)) + facet_wrap(~ servyr) + ylab(NULL)
+
+library(ggmap)
+apiKey <- fread("./APIkey.key")
+apiKey <- names(apiKey)
+register_google(key = apiKey)
 
 DallasMap <- get_map(location = "Dallas", zoom = 11, source = "google")
 ggmap(DallasMap)

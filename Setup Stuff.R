@@ -1,24 +1,36 @@
 remove.packages("blogdown")
 install.packages("blogdown")
-library(blogdown)
+
 library(data.table)
 
+# Run This
+# 1. Library
+library(blogdown)
+
+# 2. Use RStudio AddIn to create a New Post
+
+# 3. Serve site
 setwd("C:/Users/sconroy/Documents/meystingray.github.io")
+blogdown::serve_site()
+
+# 4. Edit the post
 getOption("blogdown.subdir", "post")
 blogdown::new_site(dir = "C:/Users/sconroy/Documents/meystingray.github.io")
 blogdown::new_post(title = "Murder Rates in Dallas",ext = ".Rmd",
                    subdir = "C:/Users/sconroy/Documents/meystingray.github.io/content/post")
+
+
 # Use the blogdown addin to create new posts
-
-
+setwd("C:/Users/sconroy/Documents/DallasPoliceData")
 library(ggmap)
-register_google(key = "")
+apiKey <- fread("./APIkey.key")
+apiKey <- names(apiKey)
+register_google(key = apiKey)
 
-bikemap1 <- get_map(location = c(lon = -95.3632715, lat = 29.7632836),
-                    maptype = "terrain", source = "google", zoom = 14)
 
-DallasMap <- get_map(location = "Dallas", zoom = 15, source = "google")
-ggmap(map)
-dev.off()
-ggmap(map) + 
-    geom_point(data = starbucksNC, aes(x = Longitude, y = Latitude), color = "navy", size = 1)
+# Setup Shiny
+setwd("C:/Users/sconroy/Documents/meystingray.github.io/Shiny")
+library(shiny)
+library(rsconnect)
+runApp()
+deployApp()

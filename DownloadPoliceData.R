@@ -7,6 +7,12 @@ library("spdep")
 library("rgdal")
 
 
+AllData <- RSocrata::ls.socrata("https://www.dallasopendata.com")
+AllData <- AllData[,c("title","landingPage","modified","identifier","description","keyword","theme")]
+setDT(AllData)
+q <- AllData[grepl("Police",title),]
+
+
 # Police Arrests, https://www.dallasopendata.com/Public-Safety/Police-Arrests/sdr7-6v3j
 PA <- read.socrata("https://www.dallasopendata.com/resource/sdr7-6v3j.csv")
 
@@ -14,7 +20,7 @@ PA <- read.socrata("https://www.dallasopendata.com/resource/sdr7-6v3j.csv")
 PAC <- read.socrata("https://www.dallasopendata.com/resource/9fxf-t2tr.json")
 
 # Police Incidents, https://www.dallasopendata.com/Public-Safety/Police-Incidents/qv6i-rri7
-PI <- read.socrata("https://www.dallasopendata.com/resource/qv6i-rri7.csv")
+PI <- read.socrata(AllData[title == "Police Incidents",landingPage])
 
 # Police Bulk Data, https://www.dallasopendata.com/Public-Safety/Police-Bulk-Data/ftja-9jxd
 PBD <- read.socrata("https://www.dallasopendata.com/resource/ftja-9jxd.csv")

@@ -1,6 +1,7 @@
 # Police Incidents, https://www.dallasopendata.com/Public-Safety/Police-Incidents/qv6i-rri7
 PI <- read.socrata("https://www.dallasopendata.com/resource/qv6i-rri7.csv")
 #PI <- readRDS("C:/Users/sconroy/Desktop/Debug/PoliceIncidents.RDS")
+PI <- readRDS("C:/Users/sconroy/Documents/DallasPoliceData/PoliceIncidents1-9-21.RDS")
 
 library(data.table)
 library(ggplot2)
@@ -12,21 +13,40 @@ setDT(PI)
 unique(PI$offincident)
 unique(PI$comp)
 
+# PI Badge Analysis
+PI[,Date := as.Date(substr(date1,1,10))]
+PI[,MonthDate := as.Date(paste0(format(Date,"%Y-%m"),"-01"))]
+
+NumOfficers <- data.table(MonthDate = unique(PI$MonthDate))
+for (m in NumOfficers$MonthDate) {
+    
+    NumOfficers[MonthDate == m,NumOfficers := 
+                    length(unique(c(
+                        PI[MonthDate == m,unique(ro1badge)],
+                        PI[MonthDate == m,unique(ro2badge)],
+                        PI[MonthDate == m,unique(assoffbadge)]
+                    )))]
+    
+}
+NumOfficers <- NumOfficers[MonthDate >= as.Date("2014-06-01") & MonthDate < as.Date("2021-01-01"),]
+
+library(ggplot2)
+ggplot(NumOfficers,aes(x = MonthDate,y = NumOfficers)) + geom_line() + geom_smooth(n = 50)
+
+
 # Extract murder incidents by looking for "MURDER" or "HOMICIDE" in the officer's incident description.
+PI[grepl("MANSLAUGHTER",offincident),unique(offincident)]
+PI[Date >= as.Date("2020-01-01") & victimcond == "Deceased",unique(offincident)]
+PI[victimcond == "Deceased",unique(offincident)]
 Murder <- PI[grepl("MURDER",offincident) | grepl("HOMICIDE",offincident) | grepl("MURDER",ucr_offense) | 
                  grepl("HOMICIDE",nibrs_crime_category) | grepl("MURDER",nibrs_crime),]
-saveRDS(Murder,file = "C:/Users/sconroy/Documents/DallasPoliceData/Murder.RDS")
-Murder <- readRDS("C:/Users/sconroy/Desktop/Debug/Murder.RDS")
-unique(Murder$offincident)
-PI[grepl("MANSLAUGHTER",offincident),unique(offincident)]
+Murder <- merge(x = Murder,y = NumOfficers,by.x = "MonthDate",by.y = "MonthDate")
+#saveRDS(Murder,file = "C:/Users/sconroy/Documents/DallasPoliceData/Murder.RDS")
+#Murder <- readRDS("C:/Users/sconroy/Desktop/Debug/Murder.RDS")
 
-
-PI[,Date := as.Date(substr(date1,1,10))]
-Murder[,Date := as.Date(substr(date1,1,10))]
-Murder[victimcond == "Deceased",unique(offincident)]
-PI[Date >= as.Date("2020-01-01") & victimcond == "Deceased",unique(offincident)]
 
 # Clean Up Data
+Murder[,Date := as.Date(substr(date1,1,10))]
 Murder[,WeekNum := strftime(Date, format = "%V")]
 Murder <- merge(Murder,Murder[,head(.SD, 1L),.SDcols = "Date",by = c("servyr","WeekNum")],by = c("servyr","WeekNum"))
 setnames(Murder,old = c("Date.x","Date.y"),new = c("Date","WeekDate"))
@@ -44,12 +64,20 @@ Murder[,SmoothNumPerMonth := predict(smooth.spline(NumPerMonth,df = 10))$y]
 # Plot Num of Murders per Month & Day
 ggplot(Murder) +
     geom_line(aes(x = MonthDate,y = SmoothNumPerMonth,color = "red"),size = 1) + 
-    geom_point(data = Murder,aes(x = Date,y = NumPerMonth)) + 
-    geom_line(aes(x = Date,y = SmoothNumPerDay,color = "blue")) +
+    #geom_point(aes(x = Date,y = NumPerMonth,color = "Red")) + 
+    geom_line(aes(x = MonthDate,y = NumOfficers/120,color = "blue"),size = 1) +
     ggtitle("Dallas Murder Rates since 2014") + ylab("# Murders") + 
     scale_colour_manual(name = '',values = c('blue'='blue','red'='red'),
-                        labels = c('Per Day','Per Month')) + 
-    theme(legend.position = "top",plot.title = element_text(hjust = 0.5))
+                        labels = c('# Officers Making Arrests in DPD Per Month','Dallas Murders Per Month')) + 
+    theme(legend.position = "top",plot.title = element_text(hjust = 0.5)) + 
+    scale_y_continuous(name = "Num Murders Per Month", 
+        sec.axis = sec_axis(~ .*180, name = "Num Officers")
+    ) +
+    theme(axis.text.y.left = element_text(colour = "red"),
+          axis.text.y.right = element_text(colour = "blue"),
+        axis.title.y.left = element_text(color = "red"),
+        axis.title.y.right = element_text(color = "blue"))
+
 
 ggplot(Murder) +
     geom_point(aes(x = WeekDate,y = NumPerWeek)) + 

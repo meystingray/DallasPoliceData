@@ -8,12 +8,23 @@ library(stringr)
 library(RSocrata)
 setDT(PI)
 
-# Extract murder incidents by looking for "MURDER" or "HOMICIDE" in the officer's incident description.
-Murder <- PI[grepl("MURDER",offincident) | grepl("HOMICIDE",offincident),]
-saveRDS(Murder,file = "C:/Users/sconroy/Desktop/Debug/Murder.RDS")
-Murder <- readRDS("C:/Users/sconroy/Desktop/Debug/Murder.RDS")
 
+unique(PI$offincident)
+unique(PI$comp)
+
+# Extract murder incidents by looking for "MURDER" or "HOMICIDE" in the officer's incident description.
+Murder <- PI[grepl("MURDER",offincident) | grepl("HOMICIDE",offincident) | grepl("MURDER",ucr_offense) | 
+                 grepl("HOMICIDE",nibrs_crime_category) | grepl("MURDER",nibrs_crime),]
+saveRDS(Murder,file = "C:/Users/sconroy/Documents/DallasPoliceData/Murder.RDS")
+Murder <- readRDS("C:/Users/sconroy/Desktop/Debug/Murder.RDS")
+unique(Murder$offincident)
+PI[grepl("MANSLAUGHTER",offincident),unique(offincident)]
+
+
+PI[,Date := as.Date(substr(date1,1,10))]
 Murder[,Date := as.Date(substr(date1,1,10))]
+Murder[victimcond == "Deceased",unique(offincident)]
+PI[Date >= as.Date("2020-01-01") & victimcond == "Deceased",unique(offincident)]
 
 # Clean Up Data
 Murder[,WeekNum := strftime(Date, format = "%V")]
@@ -51,6 +62,7 @@ ggplot(Murder[Date >= as.Date("2020-06-01"),]) +
     geom_line(aes(x = WeekDate,y = SmoothNumPerDay),color = "red") +
     ggtitle("Murder Rates per Day") + ylab("# Murders")
 
+Murders2020 <- Murder[Date >= as.Date("2020-01-01"),]
 Murder[Date >= as.Date("2020-01-01"),.(WeekDate,WeekNum,NumPerWeek,SmoothNumPerWeek)]
 
 # Plot 2020 Only Murder Rate per Month

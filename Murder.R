@@ -28,7 +28,29 @@ for (m in NumOfficers$MonthDate) {
                     )))]
     
 }
+
 NumOfficers <- NumOfficers[MonthDate >= as.Date("2014-06-01") & MonthDate < as.Date("2021-01-01"),]
+
+
+assault <- PI[grepl("ASSAULT",offincident),]
+assault[,NumIncidentsPerMonth := .N,by = MonthDate]
+assault <- assault[,head(.SD,1),.SDcols = "NumIncidentsPerMonth",by = MonthDate]
+assault <- assault[MonthDate >= as.Date("2014-06-01") & MonthDate < as.Date("2021-01-01"),]
+
+theft <- PI[grepl("THEFT",offincident),]
+theft[,NumIncidentsPerMonth := .N,by = MonthDate]
+theft <- theft[,head(.SD,1),.SDcols = "NumIncidentsPerMonth",by = MonthDate]
+theft <- theft[MonthDate >= as.Date("2014-06-01") & MonthDate < as.Date("2021-01-01"),]
+
+traffic <- PI[grepl("TRAFFICKING",offincident),]
+traffic[,NumIncidentsPerYear := .N,by = "servyr"]
+traffic <- traffic[,head(.SD,1),.SDcols = c("MonthDate","NumIncidentsPerYear"),by = servyr]
+
+ggplot(data = assault,aes(x = MonthDate,y = NumIncidentsPerMonth)) + geom_smooth() + geom_point()
+ggplot(data = theft,aes(x = MonthDate,y = NumIncidentsPerMonth)) + geom_smooth() + geom_point()
+ggplot(data = traffic,aes(x = servyr,y = NumIncidentsPerYear)) + geom_smooth() + geom_point()
+
+unique(PI$offincident)
 
 library(ggplot2)
 ggplot(NumOfficers,aes(x = MonthDate,y = NumOfficers)) + geom_line() + geom_smooth(n = 50)

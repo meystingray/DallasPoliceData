@@ -1,6 +1,7 @@
 
 library(data.table)
-
+library(ggplot2)
+library(prophet)
 PI <- readRDS("C:/Users/sconroy/Documents/DallasPoliceData/PoliceIncidents1-9-21.RDS")
 setDT(PI)
 
@@ -20,7 +21,7 @@ PI[,WeekDate := min(Date),by = WeekNum]
 ggplot(PI,aes(x = WeekDate)) + geom_line(stat = 'count')
 
 
-library(prophet)
+
 df <- PI[,.(ds = min(WeekDate),y = .N),by = WeekDate]
 df
 m <- prophet(df)
@@ -32,8 +33,9 @@ tail(forecast[c('ds', 'yhat', 'yhat_lower', 'yhat_upper')])
 
 plot(m, forecast)
 df
+prophet_plot_components(m, forecast)
 
-
+dyplot.prophet(m, forecast)
 
 
 PI[,LatLongStart := regexpr("(",geocoded_column,fixed = TRUE)[1] + 1,by = rowid]

@@ -53,4 +53,5 @@ setnames(Murder,old = c("watch","offincident","comprace","compsex","compage","co
          c("Watch","Officer_Incident","Comp_Race","Comp_Sex","Comp_Age","Comp_Ethnicity","Status","Victim_Condition","Beat"),
          skip_absent = TRUE)
 
+
 saveRDS(Murder,"C:/Users/sconroy/Documents/DallasPoliceData/Murder.RDS")

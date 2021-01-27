@@ -21,6 +21,20 @@ ggplot(PI,aes(x = WeekDate)) + geom_line(stat = 'count')
 
 
 library(prophet)
+df <- PI[,.(ds = min(WeekDate),y = .N),by = WeekDate]
+df
+m <- prophet(df)
+future <- make_future_dataframe(m, periods = 365)
+tail(future)
+forecast <- predict(m, future)
+tail(forecast[c('ds', 'yhat', 'yhat_lower', 'yhat_upper')])
+
+
+plot(m, forecast)
+df
+
+
+
 
 PI[,LatLongStart := regexpr("(",geocoded_column,fixed = TRUE)[1] + 1,by = rowid]
 PI[,LatLongEnd := regexpr(")",geocoded_column,fixed = TRUE)[1] - 1,by = rowid]

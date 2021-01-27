@@ -5,13 +5,15 @@ library("gstat")
 library("sp")
 library("spdep")
 library("rgdal")
-
+library(data.table)
 
 AllData <- RSocrata::ls.socrata("https://www.dallasopendata.com")
 AllData <- AllData[,c("title","landingPage","modified","identifier","description","keyword","theme")]
 setDT(AllData)
 q <- AllData[grepl("Police",title),]
 
+
+PoliceStations <- read.socrata(AllData[title == "Dallas Police Stations",identifier])
 
 # Police Arrests, https://www.dallasopendata.com/Public-Safety/Police-Arrests/sdr7-6v3j
 PA <- read.socrata("https://www.dallasopendata.com/resource/sdr7-6v3j.csv")
@@ -20,7 +22,7 @@ PA <- read.socrata("https://www.dallasopendata.com/resource/sdr7-6v3j.csv")
 PAC <- read.socrata("https://www.dallasopendata.com/resource/9fxf-t2tr.json")
 
 # Police Incidents, https://www.dallasopendata.com/Public-Safety/Police-Incidents/qv6i-rri7
-PI <- read.socrata(AllData[title == "Police Incidents",landingPage])
+PI <- read.socrata(AllData[title == "Police Incidents",identifier])
 
 # Police Bulk Data, https://www.dallasopendata.com/Public-Safety/Police-Bulk-Data/ftja-9jxd
 PBD <- read.socrata("https://www.dallasopendata.com/resource/ftja-9jxd.csv")
@@ -62,3 +64,20 @@ convertXYtoLatLong <- function(XYpoints,zone = 14) {
     return(spgeo)
     
 }
+
+PoliceStations$location
+setDT(PoliceStations)
+PoliceStations[,rowid := 1:.N]
+PoliceStations[,LatLongStart := regexpr("(",location,fixed = TRUE)[1] + 1,by = rowid]
+PoliceStations[,LatLongEnd := regexpr(")",location,fixed = TRUE)[1] - 1,by = rowid]
+PoliceStations[,LatLong := substr(location,start = LatLongStart,stop = LatLongEnd)]
+PoliceStations[,LatLongComma := regexpr(",",LatLong,fixed = TRUE)[1],by = rowid]
+PoliceStations[,Latitude := substr(LatLong,start = 1,stop = LatLongComma - 1)]
+PoliceStations[,Longitude := substr(LatLong,start = LatLongComma + 1,stop = 1000)]
+PoliceStations[,Longitude := as.numeric(Longitude)]
+PoliceStations[,Latitude := as.numeric(Latitude)]
+PoliceStations[,c("LatLongStart","LatLongEnd","LatLong","LatLongComma") := NULL]
+PoliceStations$rowid <- NULL
+
+saveRDS(PoliceStations,"PoliceStations.RDS")
+getwd()
